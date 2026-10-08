@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Прайс-лист</title>
+<meta name="description" content="Оптовый прайс-лист: цены и остатки по категориям">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+
+/* Layout: one narrow column — header, search, accordion of categories; rows = name · остаток · цена */
+:root{
+  --bg:#121212;--surface:#1c1c1d;--surface-2:#242426;--line:#2c2c2f;
+  --fg:#f2f1ee;--muted:#9a9894;--faint:#6f6d69;--accent:#e8c58a;--accent-ink:#1a1408;
+  --danger:#f08a7a;--ok:#9fd3a6;
+  --font:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f6f5f2;--surface:#ffffff;--surface-2:#efede8;--line:#e2dfd8;
+  --fg:#1b1a18;--muted:#6b6862;--faint:#98948c;--accent:#8a5d16;--accent-ink:#fff;
+  --danger:#b4412f;--ok:#2f7a3b;color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f6f5f2;--surface:#ffffff;--surface-2:#efede8;--line:#e2dfd8;
+  --fg:#1b1a18;--muted:#6b6862;--faint:#98948c;--accent:#8a5d16;--accent-ink:#fff;
+  --danger:#b4412f;--ok:#2f7a3b;color-scheme:light}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:40px 16px 56px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:30px;line-height:1.1;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:14px;margin:6px 0 0}
+.btn{font:inherit;font-weight:600;font-size:14px;border:0;border-radius:9px;padding:9px 14px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:var(--surface-2);color:var(--fg)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,.cat:focus-visible,#q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.msg{flex-basis:100%;margin:0}
+.msg.err{color:var(--danger)}.msg.ok{color:var(--ok)}
+.search{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;background:var(--bg);padding-block:6px}
+#q{width:100%;font:inherit;font-size:16px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+#q::placeholder{color:var(--faint)}
+.list{display:flex;flex-direction:column;gap:10px}
+.cat{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;font-weight:600;font-size:16px;text-align:left;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 16px;cursor:pointer}
+.cat:hover{background:var(--surface-2)}
+.cat .n{color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:10px}
+.cat .chev{width:9px;height:9px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+.cat[aria-expanded="true"]{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.cat[aria-expanded="true"] .chev{transform:rotate(-135deg) translate(-2px,0)}
+.panel{background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;margin-top:-10px;padding:4px 16px 14px}
+.sec{padding-top:14px}
+.sec h3{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.colh{display:grid;grid-template-columns:1fr auto auto;gap:14px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:2px 0 4px;border-bottom:1px solid var(--line)}
+.prod{padding:10px 0 4px;border-bottom:1px solid var(--line)}
+.prod:last-child{border-bottom:0}
+.pn{font-weight:600;font-size:14.5px;margin-bottom:2px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 5.5em 6.5em;gap:14px;align-items:baseline;padding:5px 0;font-size:14.5px}
+.row+.row{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.prod>.row{padding-left:12px}
+.row .nm{min-width:0;overflow-wrap:anywhere}
+.row .st{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px}
+.row .pr{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.colh span:nth-child(2){width:5.5em;text-align:right}.colh span:nth-child(3){width:6.5em;text-align:right}
+.single{border-bottom:1px solid var(--line);padding-block:8px}
+.single:last-child{border-bottom:0}
+.single .row{padding:0}
+.fl{color:var(--muted);font-weight:400}
+mark{background:color-mix(in srgb,var(--accent) 30%,transparent);color:inherit;border-radius:3px}
+.empty{color:var(--muted);text-align:center;padding:28px 0}
+.note{color:var(--faint);font-size:13px;margin:4px 0 0}
+@media (max-width:480px){h1{font-size:26px}.wrap{padding-top:24px}.row{grid-template-columns:minmax(0,1fr) 4.2em 5.8em;gap:10px}.colh span:nth-child(2){width:4.2em}.colh span:nth-child(3){width:5.8em}}
+@media (prefers-reduced-motion:reduce){.cat .chev{transition:none}}
+
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}
+.btn{text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn svg{width:16px;height:16px}
+.loading{color:var(--muted);text-align:center;padding:28px 0}
+
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <div>
+      <h1>Прайс-лист</h1>
+      <p class="sub" id="sub">Цены в рублях, без НДС</p>
+    </div>
+    <a class="btn" id="dl" href="price.xlsx" download="Прайс-лист.xlsx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Скачать Excel</a>
+  </header>
+  <div class="search"><input id="q" type="search" placeholder="Поиск по названию или вкусу" autocomplete="off" aria-label="Поиск по названию или вкусу"></div>
+  <div class="list" id="list"><p class="loading">Загружаем прайс…</p></div>
+  <p class="note">Остаток указан по оптовому складу. Для заказа свяжитесь с менеджером.</p>
+</div>
+<script src="xlsx.full.min.js"></script>
+<script>
+
+(function(){
+"use strict";
+var KNOWN = ["Жевательный Табак","Жидкости","Зажигалки и расходники","Многоразовые ЭСДН","Одноразовые электронные испарители","РастаТовары","Самокрутки, Папиросы","Сигареты","Стики и IQOS"];
+var DATA={cats:[]};
+var listEl = document.getElementById("list"), qEl = document.getElementById("q");
+var open = {};
+var rub = new Intl.NumberFormat("ru-RU",{maximumFractionDigits:2});
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function hl(s,q){s=esc(s);if(!q)return s;var i=s.toLowerCase().indexOf(esc(q).toLowerCase());if(i<0)return s;var L=esc(q).length;return s.slice(0,i)+"<mark>"+s.slice(i,i+L)+"</mark>"+s.slice(i+L)}
+function price(p){return p==null?"—":rub.format(p)+" ₽"}
+function stock(s){return s==null||s===""?"":(typeof s==="number"?rub.format(s)+" шт":esc(s))}
+function rowHtml(name,p,s,q){return '<div class="row"><span class="nm">'+name+'</span><span class="st">'+stock(s)+'</span><span class="pr">'+price(p)+'</span></div>'}
+
+function entryHtml(e,q){
+  if(e.v){
+    return '<div class="prod"><div class="pn">'+hl(e.n,q)+'</div>'+e.v.map(function(v){return rowHtml(v[0]?hl(v[0],q):'<span class="fl">без вкуса</span>',v[1],v[2])}).join("")+'</div>';
+  }
+  var nm=hl(e.n,q)+(e.f?' <span class="fl">· '+hl(e.f,q)+'</span>':'');
+  return '<div class="single">'+rowHtml(nm,e.p,e.s)+'</div>';
+}
+function panelHtml(cat,q){
+  return cat.g.map(function(sec){
+    return '<div class="sec">'+(sec.h?'<h3>'+hl(sec.h,q)+'</h3>':'')+'<div class="colh"><span>Наименование</span><span>Остаток</span><span>Цена</span></div>'+sec.l.map(function(e){return entryHtml(e,q)}).join("")+'</div>';
+  }).join("");
+}
+function match(s,q){return s&&s.toLowerCase().indexOf(q)>=0}
+function filterCat(cat,q){
+  var n=0,g=[];
+  cat.g.forEach(function(sec){
+    var secHit=match(sec.h,q),l=[];
+    sec.l.forEach(function(e){
+      if(e.v){
+        if(secHit||match(e.n,q)){l.push(e);n+=e.v.length}
+        else{var v=e.v.filter(function(x){return match(x[0],q)});if(v.length){l.push({n:e.n,v:v});n+=v.length}}
+      }else if(secHit||match(e.n,q)||match(e.f,q)){l.push(e);n++}
+    });
+    if(l.length)g.push({h:sec.h,l:l});
+  });
+  return {n:cat.n,c:n,g:g};
+}
+function render(){
+  var raw=qEl.value.trim(),q=raw.toLowerCase(),searching=q.length>=2;
+  var cats=searching?DATA.cats.map(function(c){return filterCat(c,q)}).filter(function(c){return c.c>0}):DATA.cats;
+  if(!cats.length){listEl.innerHTML='<p class="empty">Ничего не найдено по запросу «'+esc(raw)+'»</p>';return}
+  listEl.innerHTML=cats.map(function(c,i){
+    var isOpen=searching||open[c.n];
+    return '<div><button class="cat" type="button" data-cat="'+esc(c.n)+'" aria-expanded="'+(isOpen?"true":"false")+'"><span>'+esc(c.n)+'</span><span class="n">'+c.c+'<i class="chev" aria-hidden="true"></i></span></button>'+(isOpen?'<div class="panel">'+panelHtml(c,searching?raw:"")+'</div>':'')+'</div>';
+  }).join("");
+}
+listEl.addEventListener("click",function(ev){
+  var b=ev.target.closest(".cat");if(!b)return;
+  if(qEl.value.trim().length>=2){qEl.value="";}
+  var n=b.getAttribute("data-cat");open[n]=!open[n];render();
+  var nb=listEl.querySelector('.cat[data-cat="'+CSS.escape(n)+'"]');if(nb){nb.focus({preventScroll:true});}
+});
+var t;qEl.addEventListener("input",function(){clearTimeout(t);t=setTimeout(render,120)});
+
+
+
+/* ---------- Excel parsing (shared logic) ---------- */
+function clean(v){return v==null?"":String(v).replace(/\s+/g," ").trim()}
+function num(v){if(v==null||v==="")return null;if(typeof v==="number")return v;var s=String(v).replace(/[\s ]/g,"").replace(",",".");var n=parseFloat(s);return isNaN(n)?null:n}
+function parseRows(rows,known){
+  var pc=3,sc=4,fc=1,start=0,i;
+  for(i=0;i<Math.min(rows.length,20);i++){
+    var r=(rows[i]||[]).map(clean);
+    var a=r.indexOf("Цена");if(a>=0){pc=a;var b=r.indexOf("Остаток");if(b>=0)sc=b;start=i+1;break}
+    if(r[0]==="Номенклатура"){var h=r.indexOf("Характеристика");if(h>=0)fc=h;start=i+1}
+  }
+  var ks={};(known||[]).forEach(function(k){ks[clean(k).toLowerCase()]=1});
+  var cats=[],cat=null,sec=null;
+  function ensureSec(){if(!sec){sec={h:"",l:[]};cat.g.push(sec)}}
+  for(i=start;i<rows.length;i++){
+    var row=rows[i]||[],a=clean(row[0]);if(!a)continue;
+    var f=clean(row[fc]),p=num(row[pc]),sraw=row[sc],s=num(sraw);if(s==null&&clean(sraw))s=clean(sraw);
+    if(p==null){
+      if(!cat||ks[a.toLowerCase()]){cat={n:a,c:0,g:[]};cats.push(cat);sec=null;continue}
+      var nx=rows[i+1]||[];
+      if(clean(nx[0])===a&&num(nx[pc])!=null){ensureSec();sec.l.push({n:a,v:[]});continue}
+      if(sec&&!sec.l.length&&sec.h){sec.h=sec.h+" / "+a}else{sec={h:a,l:[]};cat.g.push(sec)}
+      continue;
+    }
+    ensureSec();cat.c++;
+    var last=sec.l[sec.l.length-1];
+    if(last&&last.n===a&&(last.v||last.f||f)){
+      if(!last.v){last.v=[[last.f||"",last.p,last.s]];delete last.f;delete last.p;delete last.s}
+      last.v.push([f,p,s]);
+    }else{var e={n:a,p:p,s:s};if(f)e.f=f;sec.l.push(e)}
+  }
+  cats.forEach(function(c){c.g=c.g.filter(function(g){return g.l.length&&g.l.some(function(e){return !e.v||e.v.length})})});
+  return cats.filter(function(c){return c.c>0});
+}
+function dateFrom(name){var m=/(\d{1,2})[._-](\d{1,2})[._-](\d{4})/.exec(name||"");if(m)return ("0"+m[1]).slice(-2)+"."+("0"+m[2]).slice(-2)+"."+m[3];var d=new Date();return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()}
+if(typeof window!=="undefined")window.__priceParse={parseRows:parseRows,dateFrom:dateFrom,KNOWN:KNOWN};
+
+
+
+var subEl=document.getElementById("sub"),dlEl=document.getElementById("dl");
+function fmt(d){return ("0"+d.getDate()).slice(-2)+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+d.getFullYear()}
+var lm=null;
+fetch("price.xlsx",{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error(r.status);lm=r.headers.get("Last-Modified");return r.arrayBuffer()}).then(function(buf){
+  var wb=XLSX.read(buf,{type:"array"});var ws=wb.Sheets[wb.SheetNames[0]];
+  var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+  DATA.cats=parseRows(rows,KNOWN);
+  var d=lm?new Date(lm):null;
+  if(d&&!isNaN(d)){var s=fmt(d);subEl.textContent="Актуален на "+s+" · цены в рублях, без НДС";dlEl.setAttribute("download","Прайс-лист от "+s+".xlsx")}
+  if(!DATA.cats.length){listEl.innerHTML='<p class="loading">Прайс пока пуст.</p>';return}
+  render();
+}).catch(function(){listEl.innerHTML='<p class="loading">Не удалось загрузить прайс. Обновите страницу.</p>'});
+})();
+
+</script>
+</body>
+</html>
